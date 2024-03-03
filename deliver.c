@@ -8,7 +8,7 @@
 #include <math.h>
 #include <errno.h>
 
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 4096
 #define MAX_PACKET_SIZE 1000
 
 struct packet {
