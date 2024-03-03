@@ -66,6 +66,7 @@ int main(int argc,char *argv[])
     server_address.sin_port = htons(port);
     server_address.sin_addr.s_addr = inet_addr(argv[1]);
 
+    //TEST COMMIT
 
     //Make the socket
     int sockfd;
@@ -124,11 +125,17 @@ int main(int argc,char *argv[])
     //Find total number of fragments
     int total_fragment = ((int)file_size / MAX_PACKET_SIZE) + 1;
 
+    //Timeout calculation:
+    //TimeoutInterval = EstimatedRTT(new) + 4*DevRTT(new)
+    //EstimatedRTT = (1-alpha) * EstimatedRTT + alpha * SampleRTT
+    //DevRTT = (1-beta)*DevRTT + beta*|SampleRTT-EstimatedRTT|
+    //In our case, we only find the RTT value once, so to ensure the timeout is long enough, we will just multiply the RTT by 3 and add 1 in case of rounding
 
     // this is mostly just to disable the socket after 2 seconds of waiting and no response.
     // if we get no response then we just return and cancel the program
     struct timeval timeout;
-    timeout.tv_sec = 2; //2 second timeout
+    //timeout.tv_sec = 2; //2 second timeout
+    timeout.tv_sec = (long)(3*rtt) + 1;
     timeout.tv_usec = 0;
 
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0){
