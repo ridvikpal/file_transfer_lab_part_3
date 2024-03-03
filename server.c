@@ -152,7 +152,7 @@ int main(int argc, char* argv[]){
                 char response[] = "ACK";
 
                 random_number = (double)rand() / (double)RAND_MAX;
-                if (random_number > (double) 1e-2){
+                if (random_number > (double) 0.5){
                     // send the response to the client
                     if (sendto(udpSocket, response, strlen(response), 0, (struct sockaddr*)&clientSockAddrIn,
                             clientAddressSize) < 0) {
