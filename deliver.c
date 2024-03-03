@@ -124,8 +124,12 @@ int main(int argc,char *argv[])
     long file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
+    printf("The file size is: %ld\n", file_size);
+
     //Find total number of fragments
-    int total_fragment = ((int)file_size / MAX_PACKET_SIZE) + 1;
+    int total_fragment = (file_size / MAX_PACKET_SIZE) + 1;
+
+    printf ("The total number of fragments is %d\n", total_fragment);
 
     //Timeout calculation:
     // estRTT(1) = rtt <- 1st sample RTT
@@ -170,6 +174,7 @@ int main(int argc,char *argv[])
         }
         strcpy(outgoing_packet.filename, file_name);
         outgoing_packet.size = bytes_read;
+        memset(buffer, 0, BUFFER_SIZE);
         int header_size = sprintf(buffer, "%u:%u:%u:%s:", outgoing_packet.total_frag, outgoing_packet.frag_no, outgoing_packet.size,
                               outgoing_packet.filename);
         memcpy(buffer + header_size, outgoing_packet.filedata, outgoing_packet.size);
@@ -187,10 +192,10 @@ int main(int argc,char *argv[])
 
             msg_len = recvfrom(sockfd, (char*) buffer, BUFFER_SIZE, 0, (struct sockaddr*) &server_address, &client_address_size);
             if (msg_len == -1){
-                printf("recvfrom failed when trying to ACK\n");
+                //printf("recvfrom failed when trying to ACK\n");
                 
                 if (errno == ETIMEDOUT || errno == EAGAIN || errno == EWOULDBLOCK){
-                    printf("No ACK Recieved, resending...");
+                    //printf("No ACK Recieved, resending...");
                     continue;
                 }
                 close(sockfd);
