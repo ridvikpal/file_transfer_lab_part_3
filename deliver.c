@@ -5,6 +5,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <time.h>
+#include <math.h>
+#include <errno.h>
 
 #define BUFFER_SIZE 1024
 #define MAX_PACKET_SIZE 1000
@@ -135,12 +137,11 @@ int main(int argc,char *argv[])
     //TimeoutInterval = EstimatedRTT(new) + 4*DevRTT(new)
     //In our case, we only find the RTT value once, so to ensure the timeout is long enough, we will just multiply the RTT by 3 and add 1 in case of rounding
 
-    // this is mostly just to disable the socket after 2 seconds of waiting and no response.
-    // if we get no response then we just return and cancel the program
     struct timeval timeout;
+
     //timeout.tv_sec = 2; //2 second timeout
-    timeout.tv_sec = (long)(3*rtt) + 1;
-    timeout.tv_usec = 0;
+    timeout.tv_sec = 2; // whole seconds
+    timeout.tv_usec = 0; // fractional seconds in microseconds
 
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0){
         printf ("Error in setsockopt\n");
@@ -152,6 +153,11 @@ int main(int argc,char *argv[])
     struct packet outgoing_packet;
     outgoing_packet.total_frag = total_fragment;
     outgoing_packet.frag_no = 1;
+
+    // intialize ACK timer variables
+    double sample_ack_rtt = 0, estimated_rtt = 0, old_estimated_rtt = rtt, dev_rtt = 0, old_dev_rtt = 0.25*rtt;
+    double timeout_value, int_timeout_value, fract_timeout_value;
+    clock_t start_ack_timer, end_ack_timer;
 
     // actually send the fragments in the packet
     while ((bytes_read = fread(outgoing_packet.filedata, 1, MAX_PACKET_SIZE, file)) > 0) {
@@ -169,6 +175,7 @@ int main(int argc,char *argv[])
         memcpy(buffer + header_size, outgoing_packet.filedata, outgoing_packet.size);
 
         // waiting for ack from server
+        start_ack_timer = clock();
         while (!ack){
             if (sendto(sockfd, buffer, BUFFER_SIZE, MSG_CONFIRM, (struct sockaddr *) &server_address, sizeof (server_address))<0){
                 printf ("Sending packet failed\n");
@@ -176,17 +183,44 @@ int main(int argc,char *argv[])
                 close(sockfd);
                 return -1;
             }
+
             msg_len = recvfrom(sockfd, (char*) buffer, BUFFER_SIZE, 0, (struct sockaddr*) &server_address, &client_address_size);
             if (msg_len == -1){
                 printf("recvfrom failed when trying to ACK\n");
+                
+                if (errno == ETIMEDOUT || errno == EAGAIN || errno == EWOULDBLOCK){
+                    continue;
+                }
                 close(sockfd);
-                return -1; // SHOULD BE CONTINUE?
+                return -1;
             }
             // also check if RTT has passed a certain threshold (4 standard deviations)
             // calculate timeout
             if (msg_len > 0 && strncmp(buffer, "ACK", 3) == 0){
                 ack = 1;
                 printf("ACK received for fragment number %u\n", outgoing_packet.frag_no);
+                
+                // calculate new sample RTT
+                end_ack_timer = clock();
+                sample_ack_rtt = ((double)(end_time - start_time))/ CLOCKS_PER_SEC;
+
+                // calculate new estimated RTT
+                estimated_rtt = 0.875*old_estimated_rtt + 0.125*sample_ack_rtt;
+                dev_rtt = 0.75*old_dev_rtt  + 0.25*abs(sample_ack_rtt - rtt);
+                timeout_value = estimated_rtt + 4*dev_rtt;
+
+                // setup the timeout sockopt
+                fract_timeout_value = modf(timeout_value, &(int_timeout_value)) * pow(10, 6);  
+                timeout.tv_sec = (long)int_timeout_value;
+                timeout.tv_usec = (long)fract_timeout_value;
+
+                if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0){
+                    printf ("Error in setsockopt\n");
+                    return -1;
+                }
+
+                old_estimated_rtt = estimated_rtt;
+                old_dev_rtt = dev_rtt;
             }else {
                 printf ("Waiting for ACK for fragment number %u\n", outgoing_packet.frag_no);
             }
