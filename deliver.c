@@ -195,7 +195,7 @@ int main(int argc,char *argv[])
                 //printf("recvfrom failed when trying to ACK\n");
                 
                 if (errno == ETIMEDOUT || errno == EAGAIN || errno == EWOULDBLOCK){
-                    //printf("No ACK Recieved, resending...");
+                    printf("No ACK Recieved, resending...");
                     continue;
                 }
                 close(sockfd);
