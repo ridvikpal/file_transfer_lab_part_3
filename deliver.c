@@ -124,6 +124,9 @@ int main(int argc,char *argv[])
     //Find total number of fragments
     int total_fragment = ((int)file_size / MAX_PACKET_SIZE) + 1;
 
+
+    // this is mostly just to disable the socket after 2 seconds of waiting and no response.
+    // if we get no response then we just return and cancel the program
     struct timeval timeout;
     timeout.tv_sec = 2; //2 second timeout
     timeout.tv_usec = 0;
@@ -134,11 +137,12 @@ int main(int argc,char *argv[])
     }
     size_t bytes_read;
 
-    //Create the packet
+    //Create the entire packet
     struct packet outgoing_packet;
     outgoing_packet.total_frag = total_fragment;
     outgoing_packet.frag_no = 1;
 
+    // actually send the fragments in the packet
     while ((bytes_read = fread(outgoing_packet.filedata, 1, MAX_PACKET_SIZE, file)) > 0) {
         int ack = 0;
 
