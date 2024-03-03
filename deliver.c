@@ -157,6 +157,7 @@ int main(int argc,char *argv[])
                               outgoing_packet.filename);
         memcpy(buffer + header_size, outgoing_packet.filedata, outgoing_packet.size);
 
+        // waiting for ack from server
         while (!ack){
             if (sendto(sockfd, buffer, BUFFER_SIZE, MSG_CONFIRM, (struct sockaddr *) &server_address, sizeof (server_address))<0){
                 printf ("Sending packet failed\n");
@@ -168,8 +169,10 @@ int main(int argc,char *argv[])
             if (msg_len == -1){
                 printf("recvfrom failed when trying to ACK\n");
                 close(sockfd);
-                return -1;
+                return -1; // SHOULD BE CONTINUE?
             }
+            // also check if RTT has passed (4 standard deviations)
+            // calculate timeout
             if (msg_len > 0 && strncmp(buffer, "ACK", 3) == 0){
                 ack = 1;
                 printf("ACK received for fragment number %u\n", outgoing_packet.frag_no);
