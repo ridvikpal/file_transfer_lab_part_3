@@ -6,6 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <time.h>
 
 #define MESSAGE_SIZE 1024
 
@@ -18,6 +19,8 @@ struct packet {
 };
 
 int main(int argc, char* argv[]){
+    srand(time(NULL)); // randomize seed
+    double random_number;
 
     /**** CHECK FOR INPUT VALIDATION ****/
 
@@ -164,11 +167,15 @@ int main(int argc, char* argv[]){
 
                 char response[] = "ACK";
 
-                // send the response to the client
-                if (sendto(udpSocket, response, strlen(response), 0, (struct sockaddr*)&clientSockAddrIn,
-                           clientAddressSize) < 0) {
-                    printf("Failed to send ACK response.\n");
-                    continue;
+                random_number = (double)rand() / (double)RAND_MAX;
+
+                if (random_number > (double)1e-2){
+                    // send the response to the client
+                    if (sendto(udpSocket, response, strlen(response), 0, (struct sockaddr*)&clientSockAddrIn,
+                            clientAddressSize) < 0) {
+                        printf("Failed to send ACK response.\n");
+                        continue;
+                    }
                 }
 
                 // free the char * we malloced earlier
