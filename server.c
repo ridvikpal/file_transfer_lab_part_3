@@ -8,7 +8,7 @@
 #include <arpa/inet.h>
 #include <time.h>
 
-#define MESSAGE_SIZE 1024
+#define MESSAGE_SIZE 4096
 
 struct packet {
     unsigned int total_frag;
