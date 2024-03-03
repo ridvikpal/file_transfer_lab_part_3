@@ -66,6 +66,7 @@ int main(int argc,char *argv[])
     server_address.sin_port = htons(port);
     server_address.sin_addr.s_addr = inet_addr(argv[1]);
 
+    //TEST COMMIT
 
     //Make the socket
     int sockfd;
