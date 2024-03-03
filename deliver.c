@@ -177,6 +177,7 @@ int main(int argc,char *argv[])
         // waiting for ack from server
         start_ack_timer = clock();
         while (!ack){
+            //printf ("%d\n", outgoing_packet.frag_no);
             if (sendto(sockfd, buffer, BUFFER_SIZE, MSG_CONFIRM, (struct sockaddr *) &server_address, sizeof (server_address))<0){
                 printf ("Sending packet failed\n");
                 fclose(file);
