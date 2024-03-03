@@ -126,9 +126,13 @@ int main(int argc,char *argv[])
     int total_fragment = ((int)file_size / MAX_PACKET_SIZE) + 1;
 
     //Timeout calculation:
+    // estRTT(1) = rtt <- 1st sample RTT
+    // devRTT(1) = 0.25*rtt <- 1st sample RTT
+
+    //EstimatedRTT (new) = (0.875) * EstimatedRTT (old) + 0.125 * SampleRTT (last real RTT)
+    //DevRTT (new) = (0.75)*DevRTT (old) + 0.25*|SampleRTT (last real RTT) - EstimatedRTT (old)|
+    
     //TimeoutInterval = EstimatedRTT(new) + 4*DevRTT(new)
-    //EstimatedRTT = (1-alpha) * EstimatedRTT + alpha * SampleRTT
-    //DevRTT = (1-beta)*DevRTT + beta*|SampleRTT-EstimatedRTT|
     //In our case, we only find the RTT value once, so to ensure the timeout is long enough, we will just multiply the RTT by 3 and add 1 in case of rounding
 
     // this is mostly just to disable the socket after 2 seconds of waiting and no response.
@@ -178,7 +182,7 @@ int main(int argc,char *argv[])
                 close(sockfd);
                 return -1; // SHOULD BE CONTINUE?
             }
-            // also check if RTT has passed (4 standard deviations)
+            // also check if RTT has passed a certain threshold (4 standard deviations)
             // calculate timeout
             if (msg_len > 0 && strncmp(buffer, "ACK", 3) == 0){
                 ack = 1;
